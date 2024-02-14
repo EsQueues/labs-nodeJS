@@ -1,8 +1,22 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const axios = require('axios');
+const bodyParser = require('body-parser');
+
 const app = express();
 const port = 3000;
-const bodyParser = require('body-parser');
+
+mongoose.connect('mongodb://localhost:27017/nodejsdb', { useNewUrlParser: true, useUnifiedTopology: true });
+const db = mongoose.connection;
+
+const userSchema = new mongoose.Schema({
+    name: String,
+    age: Number,
+    email: String,
+    gender: String,
+}, { collection: 'users' });
+
+const User = mongoose.model('User', userSchema);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -19,6 +33,15 @@ app.get('/:pageName', (req, res) => {
             break;
         default:
             res.status(404).send('Page not found');
+    }
+});
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await User.find({}, { _id: 0, __v: 0 });
+        res.json(users);
+    } catch (error) {
+        console.error('Error fetching user data:', error.message);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
@@ -43,23 +66,7 @@ app.get('/api/weather', async (req, res) => {
     }
 });
 
-app.get('/api/users', async (req, res) => {
-    try {
-        let link = 'https://reqres.in/api/users';
-        const response = await axios.get(link);
 
-        const users = response.data.data.map(user => ({
-            name: `${user.first_name} ${user.last_name}`,
-            email: user.email,
-            avatar: user.avatar,
-        }));
-
-        res.json(users);
-    } catch (error) {
-        console.error('Error fetching user data:', error.message);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
